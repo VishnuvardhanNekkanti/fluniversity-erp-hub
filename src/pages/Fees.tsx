@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -37,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +57,10 @@ import {
   Trophy, 
   FileText,
   Filter,
-  ChevronDown
+  ChevronDown,
+  IndianRupee,
+  Receipt,
+  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -88,11 +93,49 @@ type SemesterType = {
   name: string;
 };
 
+type PaymentMethodType = "credit_card" | "debit_card" | "net_banking" | "upi";
+
 const Fees = () => {
   const [selectedSemester, setSelectedSemester] = useState<string>("current");
   const [selectedFees, setSelectedFees] = useState<string[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [selectedFeeForPayment, setSelectedFeeForPayment] = useState<FeeType | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>("credit_card");
+  const [cardNumber, setCardNumber] = useState<string>("");
+  const [expiryDate, setExpiryDate] = useState<string>("");
+  const [cvv, setCvv] = useState<string>("");
+  const [nameOnCard, setNameOnCard] = useState<string>("");
+  const [upiId, setUpiId] = useState<string>("");
+  const [bankAccount, setBankAccount] = useState<string>("");
+  const [transactions, setTransactions] = useState<TransactionType[]>([
+    {
+      id: "trans-1",
+      date: "August 15, 2023",
+      amount: 2000,
+      description: "Library Fee",
+      paymentMethod: "Net Banking",
+      transactionId: "TXN123456789",
+    },
+    {
+      id: "trans-2",
+      date: "July 20, 2023",
+      amount: 45000,
+      description: "Tuition Fee (Previous Semester)",
+      paymentMethod: "Credit Card",
+      transactionId: "TXN987654321",
+    },
+    {
+      id: "trans-3",
+      date: "July 20, 2023",
+      amount: 5000,
+      description: "Laboratory Fee (Previous Semester)",
+      paymentMethod: "Credit Card",
+      transactionId: "TXN987654322",
+    },
+  ]);
+  const [showReceipt, setShowReceipt] = useState<boolean>(false);
+  const [currentReceipt, setCurrentReceipt] = useState<TransactionType | null>(null);
 
   const semesters: SemesterType[] = [
     { id: "current", name: "Current Semester (2023-2024)" },
@@ -100,7 +143,7 @@ const Fees = () => {
     { id: "prev2", name: "Previous Semester (2021-2022)" },
   ];
 
-  const [currentFees] = useState<FeeType[]>([
+  const [currentFees, setCurrentFees] = useState<FeeType[]>([
     {
       id: "fee-1",
       type: "Tuition Fee",
@@ -166,33 +209,6 @@ const Fees = () => {
     },
   ]);
 
-  const [transactions] = useState<TransactionType[]>([
-    {
-      id: "trans-1",
-      date: "August 15, 2023",
-      amount: 2000,
-      description: "Library Fee",
-      paymentMethod: "Net Banking",
-      transactionId: "TXN123456789",
-    },
-    {
-      id: "trans-2",
-      date: "July 20, 2023",
-      amount: 45000,
-      description: "Tuition Fee (Previous Semester)",
-      paymentMethod: "Credit Card",
-      transactionId: "TXN987654321",
-    },
-    {
-      id: "trans-3",
-      date: "July 20, 2023",
-      amount: 5000,
-      description: "Laboratory Fee (Previous Semester)",
-      paymentMethod: "Credit Card",
-      transactionId: "TXN987654322",
-    },
-  ]);
-
   // Calculate totals
   const totalFees = currentFees.reduce((sum, fee) => sum + fee.amount, 0);
   const paidFees = currentFees
@@ -229,19 +245,114 @@ const Fees = () => {
     }
   };
 
-  // Handle payment process
-  const handlePayment = () => {
+  // Open payment dialog for a specific fee
+  const openPaymentDialog = (fee: FeeType) => {
+    setSelectedFeeForPayment(fee);
+    // Reset payment form
+    setPaymentMethod("credit_card");
+    setCardNumber("");
+    setExpiryDate("");
+    setCvv("");
+    setNameOnCard("");
+    setUpiId("");
+    setBankAccount("");
+  };
+
+  // Handle payment process for multiple fees
+  const handleBulkPayment = () => {
     const feesToPay = currentFees.filter(fee => selectedFees.includes(fee.id));
-    const totalAmount = feesToPay.reduce((sum, fee) => sum + fee.amount, 0);
     
     if (feesToPay.length === 0) {
       toast.error("Please select at least one fee to pay");
       return;
     }
     
-    toast.success(`Payment of ₹${totalAmount.toLocaleString()} initiated`, {
-      description: "You will be redirected to the payment gateway.",
+    // Take the first fee as the "representative" fee for the bulk payment
+    openPaymentDialog({
+      ...feesToPay[0],
+      amount: feesToPay.reduce((sum, fee) => sum + fee.amount, 0),
+      type: `Multiple Fees (${feesToPay.length})`,
     });
+  };
+
+  // Handle payment submission
+  const handlePaymentSubmit = () => {
+    if (!selectedFeeForPayment) return;
+
+    // Validate payment information based on payment method
+    if (paymentMethod === "credit_card" || paymentMethod === "debit_card") {
+      if (!cardNumber || !expiryDate || !cvv || !nameOnCard) {
+        toast.error("Please fill in all card details");
+        return;
+      }
+    } else if (paymentMethod === "upi") {
+      if (!upiId) {
+        toast.error("Please enter UPI ID");
+        return;
+      }
+    } else if (paymentMethod === "net_banking") {
+      if (!bankAccount) {
+        toast.error("Please enter bank account number");
+        return;
+      }
+    }
+
+    // Generate a random transaction ID
+    const transactionId = "TXN" + Math.floor(Math.random() * 1000000000);
+    
+    // Create a new transaction record
+    const newTransaction: TransactionType = {
+      id: `trans-${transactions.length + 1}`,
+      date: new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      amount: selectedFeeForPayment.amount,
+      description: selectedFeeForPayment.type,
+      paymentMethod: paymentMethod === "credit_card" ? "Credit Card" : 
+                     paymentMethod === "debit_card" ? "Debit Card" : 
+                     paymentMethod === "upi" ? "UPI" : "Net Banking",
+      transactionId: transactionId,
+    };
+    
+    // Add transaction to history
+    setTransactions([newTransaction, ...transactions]);
+    
+    // Update fee status if it's a single fee payment
+    if (selectedFeeForPayment.id !== undefined) {
+      const updatedFees = currentFees.map(fee => {
+        if (selectedFeeForPayment.id === fee.id) {
+          return { ...fee, status: "paid" as const };
+        }
+        return fee;
+      });
+      setCurrentFees(updatedFees);
+    }
+    
+    // If it was a bulk payment (multiple fees)
+    if (selectedFeeForPayment.type.includes("Multiple Fees")) {
+      const updatedFees = currentFees.map(fee => {
+        if (selectedFees.includes(fee.id)) {
+          return { ...fee, status: "paid" as const };
+        }
+        return fee;
+      });
+      setCurrentFees(updatedFees);
+      setSelectedFees([]);
+    }
+    
+    // Show success message
+    toast.success(`Payment of ₹${selectedFeeForPayment.amount.toLocaleString()} successful`, {
+      description: `Transaction ID: ${transactionId}`,
+    });
+    
+    // Show receipt
+    setCurrentReceipt(newTransaction);
+    setShowReceipt(true);
+    
+    // Reset payment dialog
+    setSelectedFeeForPayment(null);
   };
 
   // Get filtered fees
@@ -255,6 +366,21 @@ const Fees = () => {
   // Toggle payment history view
   const toggleHistory = () => {
     setShowHistory(!showHistory);
+  };
+
+  // Close receipt dialog
+  const closeReceipt = () => {
+    setShowReceipt(false);
+    setCurrentReceipt(null);
+  };
+
+  // Function to download receipt as PDF (simulated)
+  const downloadReceipt = () => {
+    if (!currentReceipt) return;
+    
+    toast.success("Receipt downloaded successfully", {
+      description: "The receipt has been saved to your downloads folder.",
+    });
   };
 
   return (
@@ -459,9 +585,133 @@ const Fees = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {fee.status !== "paid" && (
-                            <Button size="sm" variant="outline">
-                              Details
+                          {fee.status !== "paid" ? (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm" variant="outline" onClick={() => openPaymentDialog(fee)}>
+                                  Pay Now
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-[425px]">
+                                <DialogHeader>
+                                  <DialogTitle className="flex items-center gap-2">
+                                    {fee.icon}
+                                    {fee.type} Payment
+                                  </DialogTitle>
+                                  <DialogDescription>
+                                    Enter payment details to complete the transaction
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="amount">Amount</Label>
+                                    <div className="flex items-center rounded-md border px-3 py-2 bg-muted/50">
+                                      <IndianRupee className="h-4 w-4 text-muted-foreground mr-2" />
+                                      <span className="font-medium">{fee.amount.toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                  <div className="grid gap-2">
+                                    <Label htmlFor="payment-method">Payment Method</Label>
+                                    <Select 
+                                      value={paymentMethod} 
+                                      onValueChange={(value) => setPaymentMethod(value as PaymentMethodType)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select payment method" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="credit_card">Credit Card</SelectItem>
+                                        <SelectItem value="debit_card">Debit Card</SelectItem>
+                                        <SelectItem value="net_banking">Net Banking</SelectItem>
+                                        <SelectItem value="upi">UPI</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  {(paymentMethod === "credit_card" || paymentMethod === "debit_card") && (
+                                    <>
+                                      <div className="grid gap-2">
+                                        <Label htmlFor="card-number">Card Number</Label>
+                                        <Input 
+                                          id="card-number" 
+                                          placeholder="1234 5678 9012 3456" 
+                                          value={cardNumber}
+                                          onChange={(e) => setCardNumber(e.target.value)}
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid gap-2">
+                                          <Label htmlFor="expiry">Expiry Date</Label>
+                                          <Input 
+                                            id="expiry" 
+                                            placeholder="MM/YY" 
+                                            value={expiryDate}
+                                            onChange={(e) => setExpiryDate(e.target.value)}
+                                          />
+                                        </div>
+                                        <div className="grid gap-2">
+                                          <Label htmlFor="cvv">CVV</Label>
+                                          <Input 
+                                            id="cvv" 
+                                            placeholder="123" 
+                                            value={cvv}
+                                            onChange={(e) => setCvv(e.target.value)}
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="grid gap-2">
+                                        <Label htmlFor="card-name">Name on Card</Label>
+                                        <Input 
+                                          id="card-name" 
+                                          placeholder="John Doe" 
+                                          value={nameOnCard}
+                                          onChange={(e) => setNameOnCard(e.target.value)}
+                                        />
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {paymentMethod === "upi" && (
+                                    <div className="grid gap-2">
+                                      <Label htmlFor="upi-id">UPI ID</Label>
+                                      <Input 
+                                        id="upi-id" 
+                                        placeholder="yourname@upi" 
+                                        value={upiId}
+                                        onChange={(e) => setUpiId(e.target.value)}
+                                      />
+                                    </div>
+                                  )}
+
+                                  {paymentMethod === "net_banking" && (
+                                    <div className="grid gap-2">
+                                      <Label htmlFor="bank-account">Bank Account Number</Label>
+                                      <Input 
+                                        id="bank-account" 
+                                        placeholder="Enter account number" 
+                                        value={bankAccount}
+                                        onChange={(e) => setBankAccount(e.target.value)}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                                <DialogFooter>
+                                  <DialogClose asChild>
+                                    <Button variant="outline">Cancel</Button>
+                                  </DialogClose>
+                                  <Button type="submit" onClick={handlePaymentSubmit}>Pay Now</Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          ) : (
+                            <Button size="sm" variant="outline" onClick={() => {
+                              const transaction = transactions.find(t => t.description === fee.type);
+                              if (transaction) {
+                                setCurrentReceipt(transaction);
+                                setShowReceipt(true);
+                              }
+                            }}>
+                              <Receipt className="mr-1 h-3.5 w-3.5" /> Receipt
                             </Button>
                           )}
                         </TableCell>
@@ -477,12 +727,16 @@ const Fees = () => {
                   </p>
                 </div>
                 {pendingFees > 0 && (
-                  <Button 
-                    disabled={selectedFees.length === 0}
-                    onClick={handlePayment}
-                  >
-                    Pay Selected Fees (₹{selectedFeesTotal.toLocaleString()})
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        disabled={selectedFees.length === 0}
+                        onClick={handleBulkPayment}
+                      >
+                        Pay Selected Fees (₹{selectedFeesTotal.toLocaleString()})
+                      </Button>
+                    </DialogTrigger>
+                  </Dialog>
                 )}
               </CardFooter>
             </CollapsibleContent>
@@ -515,8 +769,16 @@ const Fees = () => {
                           </code>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" className="h-8">
-                            <Download className="mr-1 h-3.5 w-3.5" /> Receipt
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-8" 
+                            onClick={() => {
+                              setCurrentReceipt(transaction);
+                              setShowReceipt(true);
+                            }}
+                          >
+                            <Receipt className="mr-1 h-3.5 w-3.5" /> View
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -528,6 +790,77 @@ const Fees = () => {
           </Collapsible>
         </Card>
       </motion.div>
+
+      {/* Receipt Dialog */}
+      <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" /> Payment Receipt
+            </DialogTitle>
+            <DialogDescription>
+              Receipt for payment made on {currentReceipt?.date}
+            </DialogDescription>
+          </DialogHeader>
+          {currentReceipt && (
+            <div className="border rounded-lg p-6 space-y-4">
+              <div className="flex justify-between items-center border-b pb-4">
+                <div className="font-semibold text-lg">University Payment Receipt</div>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" /> {currentReceipt.date}
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Receipt No:</span>
+                  <span className="font-medium">{currentReceipt.id.replace("trans-", "RCP-")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Student Name:</span>
+                  <span className="font-medium">John Doe</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Student ID:</span>
+                  <span className="font-medium">STU123456</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fee Type:</span>
+                  <span className="font-medium">{currentReceipt.description}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Payment Method:</span>
+                  <span className="font-medium">{currentReceipt.paymentMethod}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Transaction ID:</span>
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                    {currentReceipt.transactionId}
+                  </code>
+                </div>
+              </div>
+              
+              <div className="border-t pt-4 mt-4">
+                <div className="flex justify-between text-lg">
+                  <span className="font-medium">Total Amount Paid:</span>
+                  <span className="font-bold">₹{currentReceipt.amount.toLocaleString()}</span>
+                </div>
+              </div>
+              
+              <div className="border-t pt-4 mt-4 text-center text-xs text-muted-foreground">
+                <p>This is a computer generated receipt and does not require a signature.</p>
+                <p>For any queries, please contact the accounts department.</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeReceipt}>Close</Button>
+            <Button onClick={downloadReceipt}>
+              <Download className="mr-2 h-4 w-4" /> Download Receipt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
