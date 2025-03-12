@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,26 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { CreditCard, Download, History, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { 
+  CreditCard, 
+  Download, 
+  History, 
+  AlertCircle, 
+  CheckCircle2, 
+  Bus, 
+  GraduationCap, 
+  Library, 
+  Trophy, 
+  FileText 
+} from "lucide-react";
 import { toast } from "sonner";
 
 type FeeType = {
@@ -43,6 +63,8 @@ type FeeType = {
   amount: number;
   dueDate: string;
   status: "paid" | "pending" | "overdue";
+  icon: React.ReactNode;
+  category: "tuition" | "transport" | "sports" | "certification" | "other";
 };
 
 type TransactionType = {
@@ -54,7 +76,21 @@ type TransactionType = {
   transactionId: string;
 };
 
+type SemesterType = {
+  id: string;
+  name: string;
+};
+
 const Fees = () => {
+  const [selectedSemester, setSelectedSemester] = useState<string>("current");
+  const [selectedFees, setSelectedFees] = useState<string[]>([]);
+
+  const semesters: SemesterType[] = [
+    { id: "current", name: "Current Semester (2023-2024)" },
+    { id: "prev1", name: "Previous Semester (2022-2023)" },
+    { id: "prev2", name: "Previous Semester (2021-2022)" },
+  ];
+
   const [currentFees] = useState<FeeType[]>([
     {
       id: "fee-1",
@@ -62,6 +98,8 @@ const Fees = () => {
       amount: 45000,
       dueDate: "September 30, 2023",
       status: "pending",
+      icon: <GraduationCap className="h-4 w-4" />,
+      category: "tuition"
     },
     {
       id: "fee-2",
@@ -69,6 +107,8 @@ const Fees = () => {
       amount: 2000,
       dueDate: "September 30, 2023",
       status: "paid",
+      icon: <Library className="h-4 w-4" />,
+      category: "other"
     },
     {
       id: "fee-3",
@@ -76,6 +116,8 @@ const Fees = () => {
       amount: 5000,
       dueDate: "September 30, 2023",
       status: "pending",
+      icon: <FileText className="h-4 w-4" />,
+      category: "other"
     },
     {
       id: "fee-4",
@@ -83,6 +125,8 @@ const Fees = () => {
       amount: 8000,
       dueDate: "October 15, 2023",
       status: "pending",
+      icon: <Bus className="h-4 w-4" />,
+      category: "transport"
     },
     {
       id: "fee-5",
@@ -90,6 +134,26 @@ const Fees = () => {
       amount: 3500,
       dueDate: "November 10, 2023",
       status: "pending",
+      icon: <FileText className="h-4 w-4" />,
+      category: "other"
+    },
+    {
+      id: "fee-6",
+      type: "Sports Fee",
+      amount: 2500,
+      dueDate: "October 30, 2023",
+      status: "pending",
+      icon: <Trophy className="h-4 w-4" />,
+      category: "sports"
+    },
+    {
+      id: "fee-7",
+      type: "Certification Fee",
+      amount: 1500,
+      dueDate: "December 15, 2023",
+      status: "pending",
+      icon: <FileText className="h-4 w-4" />,
+      category: "certification"
     },
   ]);
 
@@ -120,18 +184,56 @@ const Fees = () => {
     },
   ]);
 
-  // Calculate total pending
-  const totalPending = currentFees
+  // Calculate totals
+  const totalFees = currentFees.reduce((sum, fee) => sum + fee.amount, 0);
+  const paidFees = currentFees
+    .filter((fee) => fee.status === "paid")
+    .reduce((sum, fee) => sum + fee.amount, 0);
+  const pendingFees = currentFees
     .filter((fee) => fee.status !== "paid")
     .reduce((sum, fee) => sum + fee.amount, 0);
 
+  // Calculate selected fees total
+  const selectedFeesTotal = currentFees
+    .filter((fee) => selectedFees.includes(fee.id) && fee.status !== "paid")
+    .reduce((sum, fee) => sum + fee.amount, 0);
+
+  // Handle select/deselect all
+  const handleSelectAll = () => {
+    if (selectedFees.length === currentFees.filter(fee => fee.status !== "paid").length) {
+      setSelectedFees([]);
+    } else {
+      setSelectedFees(currentFees.filter(fee => fee.status !== "paid").map(fee => fee.id));
+    }
+  };
+
+  // Handle checkbox change
+  const handleCheckboxChange = (feeId: string) => {
+    if (selectedFees.includes(feeId)) {
+      setSelectedFees(selectedFees.filter(id => id !== feeId));
+    } else {
+      setSelectedFees([...selectedFees, feeId]);
+    }
+  };
+
   // Handle payment process
-  const handlePayment = (feesSelected: FeeType[]) => {
-    const totalAmount = feesSelected.reduce((sum, fee) => sum + fee.amount, 0);
+  const handlePayment = () => {
+    const feesToPay = currentFees.filter(fee => selectedFees.includes(fee.id));
+    const totalAmount = feesToPay.reduce((sum, fee) => sum + fee.amount, 0);
+    
+    if (feesToPay.length === 0) {
+      toast.error("Please select at least one fee to pay");
+      return;
+    }
     
     toast.success(`Payment of ₹${totalAmount.toLocaleString()} initiated`, {
       description: "You will be redirected to the payment gateway.",
     });
+  };
+
+  // Get fees by category
+  const getFeesByCategory = (category: FeeType["category"]) => {
+    return currentFees.filter(fee => fee.category === category);
   };
 
   return (
@@ -153,48 +255,61 @@ const Fees = () => {
         transition={{ delay: 0.1, duration: 0.4 }}
       >
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" /> Fee Summary
-            </CardTitle>
-            <CardDescription>Current academic year fees</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" /> Fee Summary
+              </CardTitle>
+              <CardDescription>Current academic year fees</CardDescription>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Select 
+                value={selectedSemester} 
+                onValueChange={setSelectedSemester}
+              >
+                <SelectTrigger className="w-[240px]">
+                  <SelectValue placeholder="Select semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  {semesters.map(semester => (
+                    <SelectItem key={semester.id} value={semester.id}>
+                      {semester.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="rounded-lg border bg-card p-4">
                 <div className="text-sm text-muted-foreground">Total Fees</div>
                 <div className="mt-1 text-2xl font-bold">
-                  ₹{(
-                    currentFees.reduce((sum, fee) => sum + fee.amount, 0)
-                  ).toLocaleString()}
+                  ₹{totalFees.toLocaleString()}
                 </div>
               </div>
               <div className="rounded-lg border bg-card p-4">
                 <div className="text-sm text-muted-foreground">Paid Amount</div>
                 <div className="mt-1 text-2xl font-bold text-green-600">
-                  ₹{(
-                    currentFees
-                      .filter((fee) => fee.status === "paid")
-                      .reduce((sum, fee) => sum + fee.amount, 0)
-                  ).toLocaleString()}
+                  ₹{paidFees.toLocaleString()}
                 </div>
               </div>
               <div className="rounded-lg border bg-card p-4">
                 <div className="text-sm text-muted-foreground">Pending Amount</div>
                 <div className="mt-1 text-2xl font-bold text-amber-600">
-                  ₹{totalPending.toLocaleString()}
+                  ₹{pendingFees.toLocaleString()}
                 </div>
               </div>
             </div>
 
-            {totalPending > 0 && (
+            {pendingFees > 0 && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <div className="flex gap-3 text-amber-800">
                   <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
                   <div>
                     <h4 className="font-medium">Payment Due</h4>
                     <p className="text-sm">
-                      You have pending fees of ₹{totalPending.toLocaleString()}. Please make the payment before the due date to avoid late fees.
+                      You have pending fees of ₹{pendingFees.toLocaleString()}. Please make the payment before the due date to avoid late fees.
                     </p>
                   </div>
                 </div>
@@ -204,19 +319,23 @@ const Fees = () => {
         </Card>
       </motion.div>
 
-      <Tabs defaultValue="current">
+      <Tabs defaultValue="all">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.3 }}
         >
           <TabsList className="mb-4">
-            <TabsTrigger value="current">Current Fees</TabsTrigger>
+            <TabsTrigger value="all">All Fees</TabsTrigger>
+            <TabsTrigger value="tuition">Tuition</TabsTrigger>
+            <TabsTrigger value="transport">Transport</TabsTrigger>
+            <TabsTrigger value="sports">Sports</TabsTrigger>
+            <TabsTrigger value="certification">Certification</TabsTrigger>
             <TabsTrigger value="history">Payment History</TabsTrigger>
           </TabsList>
         </motion.div>
 
-        <TabsContent value="current">
+        <TabsContent value="all">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -230,10 +349,26 @@ const Fees = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="mb-4 flex justify-between items-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleSelectAll}
+                    size="sm"
+                  >
+                    {selectedFees.length === currentFees.filter(fee => fee.status !== "paid").length 
+                      ? "Deselect All" 
+                      : "Select All"}
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    Selected: <span className="font-medium">₹{selectedFeesTotal.toLocaleString()}</span>
+                  </div>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[50px]">Select</TableHead>
                       <TableHead>Fee Type</TableHead>
+                      <TableHead>Category</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Due Date</TableHead>
                       <TableHead>Status</TableHead>
@@ -243,7 +378,19 @@ const Fees = () => {
                   <TableBody>
                     {currentFees.map((fee) => (
                       <TableRow key={fee.id}>
-                        <TableCell className="font-medium">{fee.type}</TableCell>
+                        <TableCell>
+                          {fee.status !== "paid" && (
+                            <Checkbox 
+                              checked={selectedFees.includes(fee.id)}
+                              onCheckedChange={() => handleCheckboxChange(fee.id)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {fee.icon}
+                          {fee.type}
+                        </TableCell>
+                        <TableCell className="capitalize">{fee.category}</TableCell>
                         <TableCell>₹{fee.amount.toLocaleString()}</TableCell>
                         <TableCell>{fee.dueDate}</TableCell>
                         <TableCell>
@@ -263,54 +410,9 @@ const Fees = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           {fee.status !== "paid" && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button size="sm" variant="outline">
-                                  Pay Now
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Pay {fee.type}</DialogTitle>
-                                  <DialogDescription>
-                                    Complete your payment through our secure payment gateway
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                  <div className="rounded-lg border p-4">
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Fee Type:</span>
-                                      <span className="font-medium">{fee.type}</span>
-                                    </div>
-                                    <div className="mt-2 flex justify-between">
-                                      <span className="text-muted-foreground">Amount:</span>
-                                      <span className="font-medium">₹{fee.amount.toLocaleString()}</span>
-                                    </div>
-                                    <div className="mt-2 flex justify-between">
-                                      <span className="text-muted-foreground">Due Date:</span>
-                                      <span className="font-medium">{fee.dueDate}</span>
-                                    </div>
-                                  </div>
-                                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                                    <h4 className="font-medium text-primary">Payment Methods</h4>
-                                    <ul className="mt-2 space-y-2 text-sm">
-                                      <li>• Credit/Debit Card</li>
-                                      <li>• Net Banking</li>
-                                      <li>• UPI</li>
-                                      <li>• Wallet</li>
-                                    </ul>
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <Button
-                                    onClick={() => handlePayment([fee])}
-                                    className="w-full sm:w-auto"
-                                  >
-                                    Proceed to Payment
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
+                            <Button size="sm" variant="outline">
+                              Details
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -321,59 +423,301 @@ const Fees = () => {
               <CardFooter className="flex justify-between border-t px-6 py-4">
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Total pending: <span className="font-medium">₹{totalPending.toLocaleString()}</span>
+                    Total pending: <span className="font-medium">₹{pendingFees.toLocaleString()}</span>
                   </p>
                 </div>
-                {totalPending > 0 && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button>Pay All Pending Fees</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Pay All Pending Fees</DialogTitle>
-                        <DialogDescription>
-                          Complete your payment through our secure payment gateway
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="rounded-lg border p-4">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Total Amount:</span>
-                            <span className="font-medium">₹{totalPending.toLocaleString()}</span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          {currentFees
-                            .filter((fee) => fee.status !== "paid")
-                            .map((fee) => (
-                              <div key={fee.id} className="flex justify-between text-sm">
-                                <span>{fee.type}</span>
-                                <span>₹{fee.amount.toLocaleString()}</span>
-                              </div>
-                            ))}
-                        </div>
-                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                          <h4 className="font-medium text-primary">Payment Methods</h4>
-                          <ul className="mt-2 space-y-2 text-sm">
-                            <li>• Credit/Debit Card</li>
-                            <li>• Net Banking</li>
-                            <li>• UPI</li>
-                            <li>• Wallet</li>
-                          </ul>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          onClick={() => handlePayment(currentFees.filter((fee) => fee.status !== "paid"))}
-                          className="w-full sm:w-auto"
-                        >
-                          Proceed to Payment
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                {pendingFees > 0 && (
+                  <Button 
+                    disabled={selectedFees.length === 0}
+                    onClick={handlePayment}
+                  >
+                    Pay Selected Fees (₹{selectedFeesTotal.toLocaleString()})
+                  </Button>
                 )}
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        {/* Tuition Fees Tab */}
+        <TabsContent value="tuition">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <GraduationCap className="h-5 w-5" /> Tuition Fees
+                </CardTitle>
+                <CardDescription>Academic tuition fees</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Select</TableHead>
+                      <TableHead>Fee Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFeesByCategory("tuition").map((fee) => (
+                      <TableRow key={fee.id}>
+                        <TableCell>
+                          {fee.status !== "paid" && (
+                            <Checkbox 
+                              checked={selectedFees.includes(fee.id)}
+                              onCheckedChange={() => handleCheckboxChange(fee.id)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {fee.icon}
+                          {fee.type}
+                        </TableCell>
+                        <TableCell>₹{fee.amount.toLocaleString()}</TableCell>
+                        <TableCell>{fee.dueDate}</TableCell>
+                        <TableCell>
+                          {fee.status === "paid" ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">
+                              <CheckCircle2 className="mr-1 h-3 w-3" /> Paid
+                            </Badge>
+                          ) : fee.status === "overdue" ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-50">
+                              Overdue
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 hover:bg-amber-50">
+                              Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handlePayment} disabled={selectedFees.length === 0}>
+                  Pay Selected Tuition Fees
+                </Button>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        {/* Transport Fees Tab */}
+        <TabsContent value="transport">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bus className="h-5 w-5" /> Transport Fees
+                </CardTitle>
+                <CardDescription>Bus and transportation fees</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Select</TableHead>
+                      <TableHead>Fee Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFeesByCategory("transport").map((fee) => (
+                      <TableRow key={fee.id}>
+                        <TableCell>
+                          {fee.status !== "paid" && (
+                            <Checkbox 
+                              checked={selectedFees.includes(fee.id)}
+                              onCheckedChange={() => handleCheckboxChange(fee.id)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {fee.icon}
+                          {fee.type}
+                        </TableCell>
+                        <TableCell>₹{fee.amount.toLocaleString()}</TableCell>
+                        <TableCell>{fee.dueDate}</TableCell>
+                        <TableCell>
+                          {fee.status === "paid" ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">
+                              <CheckCircle2 className="mr-1 h-3 w-3" /> Paid
+                            </Badge>
+                          ) : fee.status === "overdue" ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-50">
+                              Overdue
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 hover:bg-amber-50">
+                              Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handlePayment} disabled={selectedFees.length === 0}>
+                  Pay Selected Transport Fees
+                </Button>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        {/* Sports Fees Tab */}
+        <TabsContent value="sports">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" /> Sports Fees
+                </CardTitle>
+                <CardDescription>Athletics and sports-related fees</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Select</TableHead>
+                      <TableHead>Fee Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFeesByCategory("sports").map((fee) => (
+                      <TableRow key={fee.id}>
+                        <TableCell>
+                          {fee.status !== "paid" && (
+                            <Checkbox 
+                              checked={selectedFees.includes(fee.id)}
+                              onCheckedChange={() => handleCheckboxChange(fee.id)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {fee.icon}
+                          {fee.type}
+                        </TableCell>
+                        <TableCell>₹{fee.amount.toLocaleString()}</TableCell>
+                        <TableCell>{fee.dueDate}</TableCell>
+                        <TableCell>
+                          {fee.status === "paid" ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">
+                              <CheckCircle2 className="mr-1 h-3 w-3" /> Paid
+                            </Badge>
+                          ) : fee.status === "overdue" ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-50">
+                              Overdue
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 hover:bg-amber-50">
+                              Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handlePayment} disabled={selectedFees.length === 0}>
+                  Pay Selected Sports Fees
+                </Button>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        {/* Certification Fees Tab */}
+        <TabsContent value="certification">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" /> Certification Fees
+                </CardTitle>
+                <CardDescription>Course certification and credential fees</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">Select</TableHead>
+                      <TableHead>Fee Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFeesByCategory("certification").map((fee) => (
+                      <TableRow key={fee.id}>
+                        <TableCell>
+                          {fee.status !== "paid" && (
+                            <Checkbox 
+                              checked={selectedFees.includes(fee.id)}
+                              onCheckedChange={() => handleCheckboxChange(fee.id)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {fee.icon}
+                          {fee.type}
+                        </TableCell>
+                        <TableCell>₹{fee.amount.toLocaleString()}</TableCell>
+                        <TableCell>{fee.dueDate}</TableCell>
+                        <TableCell>
+                          {fee.status === "paid" ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">
+                              <CheckCircle2 className="mr-1 h-3 w-3" /> Paid
+                            </Badge>
+                          ) : fee.status === "overdue" ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-50">
+                              Overdue
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 hover:bg-amber-50">
+                              Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handlePayment} disabled={selectedFees.length === 0}>
+                  Pay Selected Certification Fees
+                </Button>
               </CardFooter>
             </Card>
           </motion.div>
@@ -437,3 +781,4 @@ const Fees = () => {
 };
 
 export default Fees;
+
