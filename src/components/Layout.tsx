@@ -10,7 +10,8 @@ import {
   CreditCard, 
   LogOut, 
   Menu, 
-  X
+  X,
+  User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -43,6 +44,11 @@ const sidebarItems: SidebarItem[] = [
     icon: CreditCard,
     label: "Fees",
     href: "/fees",
+  },
+  {
+    icon: User,
+    label: "Profile",
+    href: "/profile",
   },
 ];
 

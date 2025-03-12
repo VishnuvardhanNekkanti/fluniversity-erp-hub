@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Attendance from "./pages/Attendance";
 import Fees from "./pages/Fees";
 import CGPA from "./pages/CGPA";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 
@@ -69,6 +70,16 @@ const AppRoutes = () => {
           <PrivateRoute>
             <Layout>
               <CGPA />
+            </Layout>
+          </PrivateRoute>
+        } 
+      />
+      <Route 
+        path="/profile" 
+        element={
+          <PrivateRoute>
+            <Layout>
+              <Profile />
             </Layout>
           </PrivateRoute>
         } 

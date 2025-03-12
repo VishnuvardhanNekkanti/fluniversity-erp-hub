@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -181,7 +180,6 @@ const Attendance = () => {
                   <Progress
                     value={subject.percentage}
                     className="h-2"
-                    indicatorClassName={subject.percentage < 75 ? "bg-destructive" : undefined}
                   />
                 </motion.div>
               ))}
