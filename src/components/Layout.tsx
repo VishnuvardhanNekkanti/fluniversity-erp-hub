@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "./ThemeToggle";
 
 type SidebarItem = {
   icon: React.ElementType;
@@ -82,7 +83,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         animate={{ x: sidebarOpen ? 0 : -280 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={cn(
-          "fixed z-40 h-full w-64 flex-shrink-0 bg-white shadow-sm",
+          "fixed z-40 h-full w-64 flex-shrink-0 bg-white shadow-sm dark:bg-gray-800 dark:border-gray-700",
           "flex flex-col justify-between border-r"
         )}
       >
@@ -90,7 +91,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <div className="px-6 py-8">
           <Link to="/dashboard" className="flex items-center gap-3">
             <div className="rounded-lg bg-primary p-2 text-primary-foreground">FL</div>
-            <h1 className="text-xl font-semibold text-foreground">FL University</h1>
+            <h1 className="text-xl font-semibold text-foreground dark:text-white">FL University</h1>
           </Link>
         </div>
 
@@ -105,13 +106,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 to={item.href}
                 className={cn(
                   "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-                  "hover:bg-muted",
+                  "hover:bg-muted dark:hover:bg-gray-700",
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground"
+                    ? "bg-primary/10 text-primary dark:bg-primary/20"
+                    : "text-muted-foreground dark:text-gray-300"
                 )}
               >
-                <item.icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
+                <item.icon className={cn("mr-3 h-5 w-5", isActive ? "text-primary" : "text-muted-foreground dark:text-gray-400")} />
                 {item.label}
               </Link>
             );
@@ -119,18 +120,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </nav>
 
         {/* User profile */}
-        <div className="border-t p-4">
+        <div className="border-t p-4 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarImage src="" alt={student?.name || ""} />
               <AvatarFallback>{student ? getInitials(student.name) : "FL"}</AvatarFallback>
             </Avatar>
             <div className="flex-1 truncate">
-              <p className="text-sm font-medium text-foreground">{student?.name}</p>
-              <p className="text-xs text-muted-foreground">{student?.studentId}</p>
+              <p className="text-sm font-medium text-foreground dark:text-white">{student?.name}</p>
+              <p className="text-xs text-muted-foreground dark:text-gray-400">{student?.studentId}</p>
             </div>
             <Button variant="ghost" size="icon" onClick={logout}>
-              <LogOut className="h-5 w-5 text-muted-foreground" />
+              <LogOut className="h-5 w-5 text-muted-foreground dark:text-gray-400" />
             </Button>
           </div>
         </div>
@@ -147,7 +148,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-16 items-center justify-between border-b bg-white px-6">
+        <header className="flex h-16 items-center justify-between border-b bg-white px-6 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
           <Button
             variant="ghost"
             size="icon"
@@ -160,17 +161,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Menu className="h-5 w-5" />
             )}
           </Button>
-          <div className="flex-1 lg:ml-64">
+          <div className="flex flex-1 items-center justify-between lg:ml-64">
             <h1 className="text-lg font-medium">
               {sidebarItems.find(item => item.href === location.pathname)?.label || "Dashboard"}
             </h1>
+            <ThemeToggle />
           </div>
         </header>
 
         {/* Page content */}
         <main
           className={cn(
-            "flex-1 overflow-auto",
+            "flex-1 overflow-auto bg-background dark:bg-gray-900",
             "transition-all duration-300 ease-in-out",
             isMobile ? "ml-0" : (sidebarOpen ? "ml-64" : "ml-0")
           )}

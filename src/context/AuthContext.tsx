@@ -16,6 +16,7 @@ type AuthContextType = {
   login: (studentId: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  updateProfile: (data: Partial<Student>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = (data: Partial<Student>) => {
+    if (!student) return;
+    
+    const updatedStudent = { ...student, ...data };
+    setStudent(updatedStudent);
+    localStorage.setItem("student", JSON.stringify(updatedStudent));
+    toast.success("Profile updated successfully");
+  };
+
   const logout = () => {
     setStudent(null);
     setIsAuthenticated(false);
@@ -81,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, student, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, student, login, logout, loading, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
