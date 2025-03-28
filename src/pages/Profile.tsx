@@ -30,12 +30,12 @@ const Profile = () => {
 
   useEffect(() => {
     // Simulate loading profile data
-    setTimeout(() => {
+    //setTimeout(() => {
       // Mock data - in a real application, this would come from an API
       setProfile({
-        name: student?.name || "John Doe",
-        studentId: student?.studentId || "FL2023001",
-        email: student?.email || "john.doe@fluniversity.edu",
+        name: student?.name || "Ram",
+        studentId: student?.studentId || "kjhglg",
+        email: student?.email || "Ram@fluniversity.edu",
         dateOfBirth: "15-08-2002",
         age: 22,
         phone: "9876543210",
@@ -49,7 +49,7 @@ const Profile = () => {
         gender: "Male"
       });
       setLoading(false);
-    }, 1000);
+    //}, 1000);
   }, [student]);
 
   if (loading) {
