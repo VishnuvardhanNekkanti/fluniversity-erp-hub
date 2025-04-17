@@ -90,8 +90,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         {/* Logo */}
         <div className="px-6 py-8">
           <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary p-2 text-primary-foreground">FL</div>
-            <h1 className="text-xl font-semibold text-foreground dark:text-white">FL University</h1>
+            <div className="rounded-lg bg-primary p-2 text-primary-foreground">KL</div>
+            <h1 className="text-xl font-semibold text-foreground dark:text-white">KL University</h1>
           </Link>
         </div>
 

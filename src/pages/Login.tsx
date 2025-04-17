@@ -48,7 +48,7 @@ const Login = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-primary text-2xl font-bold text-white"
           >
-            FL
+            KL
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
@@ -56,7 +56,7 @@ const Login = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-2xl font-bold text-gray-900 sm:text-3xl"
           >
-            FL University
+            KL University
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
